@@ -1,0 +1,2 @@
+# dotHyprland
+Hyprland config
