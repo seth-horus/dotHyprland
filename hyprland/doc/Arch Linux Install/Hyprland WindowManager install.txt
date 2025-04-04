@@ -1,0 +1,157 @@
+# Hyprland WindowManager install
+
+#----------------------------------------------------
+# Descargamos fuentes de letras para hyprland y kitty
+#----------------------------------------------------
+
+sudo pacman -S ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols ttf-font-awesome ttf-joypixels adobe-source-code-pro-fonts gnu-free-fonts ttf-liberation ttf-dejavu --noconfirm --needed
+
+#--------------------------------------------------------
+# Descargamos XDG portal y sus dependencias para hyprland
+#--------------------------------------------------------
+
+sudo pacman -S xdg-desktop-portal-hyprland grim slurp --noconfirm --needed
+
+#--------------------------------------------------
+# Descargamos hyprland y las dependencias de hyprpm
+#--------------------------------------------------
+
+sudo pacman -S hyprland meson --noconfirm --needed
+
+#-----------------------------------------------------------------------------------------
+# Descargamos todo lo necesario para luego clonar nuestros dotfiles de nuestro repositorio
+#-----------------------------------------------------------------------------------------
+
+sudo pacman -S kitty imagemagick python-pygments libcanberra --noconfirm --needed
+
+sudo pacman -S ranger atool ffmpegthumbnailer highlight imagemagick libcaca mediainfo odt2txt perl-image-exiftool poppler python-chardet python-pillow transmission-cli w3m --noconfirm --needed
+
+sudo pacman -S swww python-pywal --noconfirm --needed
+
+sudo pacman -S hyprlock waybar swaync nwg-look bluez bluez-utils blueman swappy udiskie network-manager-applet rofi-wayland fish starship atuin zoxide direnv bat eza kooha --noconfirm --needed
+
+sudo pacman -S mpv yt-dlp --noconfirm --needed
+
+paru -S google-chrome
+
+paru -S onlyoffice-bin
+
+paru -S simple-mtpfs
+
+sudo systemctl enable --now bluetooth
+
+#-----------------------------
+# Clonamos nuestro repositorio
+#-----------------------------
+
+git clone https://github.com/Robert1807/Dotfiles.git
+
+#--------------------------------
+# Entramos en la carpeta Dotfiles
+#--------------------------------
+
+cd Dotfiles
+
+#---------------------------------------------------------
+# Realizamos los siguientes pasos para que todo quede bien
+#---------------------------------------------------------
+
+cp -rv config/hyprland/config/* /home/robert/.config/ # copiamos los archivos de configuracion
+
+cp -rv config/hyprland/home/gitconfig /home/robert/.gitconfig # copiamos el archivo de configuracion de git
+
+cp -rv config/hyprland/home/gtkrc-2.0 /home/robert/.gtkrc-2.0 # copiamos el archivo de configuracion de xdg 11
+
+sudo cp -rv config/hyprland/fonts/* /usr/share/fonts/ # copiamos las fuentes de letras para todo el sistema
+
+sudo cp -rv config/hyprland/icons/* /usr/share/icons/ # copiamos los iconos para todo el sistema
+
+sudo cp -rv config/hyprland/themes/* /usr/share/themes/ # copiamos los temas para todo el sistema
+
+cd .config/waybar/ # entramos a la carpeta de configuracio de la barra
+
+sudo chmod +x *.sh # damos los permisos a todos los archivos .sh
+
+cd # regresamos a la carpeta principal
+
+#--------------------------------------------------
+# Creamos una carpeta de fondos de pantallas en SSD
+#--------------------------------------------------
+
+mkdir -pv /home/robert/SSD/Pictures/Wallpapers # descargamos o copiamos en el las imagenes ya que de ahi swww va a elegir los fondos de pantallas
+
+#-----------------------------------------------------------------------
+# Agregamos esto para solucionar el error del tema del puntero en waybar
+#-----------------------------------------------------------------------
+
+gsettings set org.gnome.desktop.interface cursor-theme Bibata-Modern-Ice
+
+gsettings set org.gnome.desktop.interface cursor-size 12
+
+#----------------------------------------------------
+# Agregamos esto para el tema de los iconos de waybar
+#----------------------------------------------------
+
+gsettings set org.gnome.desktop.interface icon-theme BeautySolar
+
+#--------------------------------------------------------------------------------------------
+# Creamos enlaces simbolicos para que el usuario root tambien use starship y el tema de kitty
+#--------------------------------------------------------------------------------------------
+
+sudo su # entramos como root
+
+cd /root/ # ingresamos a la carpeta root
+
+rm -rf .config/fish # eliminamos la carpeta de configuracion de fish y si el de kitty esta tambien eliminamos
+
+ln -s /home/robert/.config/kitty .config/ # creamos el enlace simbolico de kitty
+ln -s /home/robert/.config/fish .config/ # creamos el enlace simbolico de fish
+ln -s /home/robert/.config/starship.toml .config/ # creamos el enlace simbolico de starship
+
+#-------------------------
+# Pasos para instalar Qemu
+#-------------------------
+
+$ grep -Ec '(vmx|svm)' /proc/cpuinfo
+(el numero resultante tras este comando, es en resumen, el numero de núcleos de tu procesador que tienen la capacidad de virtualizar)
+
+$ sudo pacman -Syu
+
+$ sudo pacman -S virt-manager qemu-full vde2 dmidecode dnsmasq bridge-utils openbsd-netcat edk2-ovmf swtpm --noconfirm --needed
+
+$ sudo nano /etc/libvirt/libvirtd.conf
+Quitar #: unix_sock_group = "libvirt" y unix_sock_rw_perms = "0770"
+(Linea 85 y linea 108)
+
+$ sudo usermod -a -G kvm,libvirt $(whoami)
+
+$ sudo systemctl enable libvirtd.service
+$ sudo systemctl start libvirtd.service
+S sudo systemctl status libvirtd.service  (a de poner active running)
+
+$ sudo nano /etc/libvirt/qemu.conf
+Quitar # y añadir tu nombre de usuario y de grupo: (Linea 519 y linea 523)
+user = "your username"'           (en mi caso robert)
+group = "your username"'          (en mi caso robert)
+
+$ sudo systemctl restart libvirtd
+
+$ sudo virsh net-autostart default
+
+Habilitar la virtualización anidada: (opcional)
+La función de virtualización anidada le permite ejecutar máquinas virtuales dentro de una VM. Habilite la virtualización anidada kvm_intel / kvm_amd habilitando el módulo del kernel como se muestra.
+
+$ sudo modprobe -r kvm_intel
+$ sudo modprobe kvm_intel nested=1
+$ echo "options kvm_intel nested=1" | sudo tee /etc/modprobe.d/kvm-intel.conf
+
+Verificar Virtualización anidada: (opcional)
+$ systool -m kvm_intel -v | grep nested
+$ cat /sys/module/kvm_intel/parameters/nested
+
+$ sudo reboot
+
+#----------------------------
+# Hasta el momento seria todo
+#----------------------------
+

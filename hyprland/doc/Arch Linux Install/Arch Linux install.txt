@@ -1,0 +1,524 @@
+# Arch Linux Install
+
+#----------------------
+# Establecer el teclado
+#----------------------
+
+loadkeys us
+
+#------------------------------
+# Comprobar conexion a internet
+#------------------------------
+
+ping -c 3 archlinux.org
+
+#----------------------------------------------
+# Crear particiones en los discos sda sdb y sdc
+#----------------------------------------------
+
+cfdisk /dev/sda # /dev/sda1 2048M efi-system and /dev/sda2 restante linux filesystem
+
+cfdisk /dev/sdb # /dev/sdb1 todo linux filesystem
+
+cfdisk /dev/sdc # /dev/sdc1 16G linux-swap and /dev/sdc2 restante linux filesystem
+
+#--------------------------
+# Formatear las particiones
+#--------------------------
+
+mkfs.fat -F 32 /dev/sda1
+
+mkfs.btrfs -f /dev/sda2
+
+mkfs.btrfs -f /dev/sdb1
+
+mkswap /dev/sdc1
+
+mkfs.ext4 /dev/sdc2
+
+#-----------------------
+# Montar las particiones
+#-----------------------
+
+mount /dev/sda2 /mnt # montar sda2 en /mnt
+
+mkdir -pv /mnt/boot # crear la carpeta /boot en /mnt para montar sda1
+mount /dev/sda1 /mnt/boot # montar sda1 en /mnt/boot
+
+swapon /dev/sdc1 # activar swap en sdc1
+
+#---------------------------------------------------
+# Descargar reflector para actualizar los mirrorlist
+#---------------------------------------------------
+
+pacman -Sy reflector python --noconfirm --needed
+
+#----------------------------------------------------
+# Actualizar los 15 mirrors mas rapidos con reflector
+#----------------------------------------------------
+
+reflector --verbose --latest 15 --sort rate --save /etc/pacman.d/mirrorlist
+
+#--------------------------------------------------------------------
+# Editamos pacman.conf y desmarcamos la opcion de descargas paralelas
+#--------------------------------------------------------------------
+
+nano -w /etc/pacman.conf # desmarcar las descargas paralelas y aumentar en 10
+
+#-----------------------------------------------------------
+# Descargamos la base y base-devel de arch linux y un editor
+#-----------------------------------------------------------
+
+pacstrap -K /mnt base base-devel nano
+
+#-------------------------------------
+# Descargamos NetworkManager y openssh
+#-------------------------------------
+
+pacstrap -K /mnt networkmanager openssh
+
+#------------------------------
+# Establecemos el archivo fstab
+#------------------------------
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+#---------------------------------------------------------
+# Vemos el archivo fstab que creamos si todo esta correcto
+#---------------------------------------------------------
+
+cat /mnt/etc/fstab
+
+#------------------------------------------
+# Ingramos en la raiz del sistema como root
+#------------------------------------------
+
+arch-chroot /mnt
+
+#----------------------------------------------------------------
+# Editamos el archivo de configuracion de nano si asi lo deseamos
+#----------------------------------------------------------------
+
+nano -w /etc/nanorc
+
+#------------------------------------------------------------
+# Editamos el archivo locale.gen y desmarcamos nuestro idioma
+#------------------------------------------------------------
+
+nano -w /etc/locale.gen
+
+#---------------------------------
+# Generamos el idioma seleccionado
+#---------------------------------
+
+locale-gen
+
+#------------------------------------------------
+# Establecemos nuestro idioma en un archivo .conf
+#------------------------------------------------
+
+echo "LANG=en_US.UTF-8" > /etc/locale.conf # en su caso seria el que desmarco anteriormente #ejemplo es_ES.UTF en el caso de espanol de espana
+
+#--------------------------------------------------------
+# Exportamos el idioma para que lo cambie en ese instante
+#--------------------------------------------------------
+
+export LANG=en_US.UTF-8 # o en su caso el idioma que establecio anteriormente
+
+#----------------------------------
+# Establecemos nuestra zona horaria
+#----------------------------------
+
+ln -s /usr/share/zoneinfo/America/Asuncion /etc/localtime
+
+#----------------------
+# Actualizamos el reloj
+#----------------------
+
+hwclock -w
+
+#-----------------------------
+# Establecemos nuestro teclado
+#-----------------------------
+
+echo "KEYMAP=us" > /etc/vconsole.conf
+
+#----------------------------------
+# Establecemos el nombre del equipo
+#----------------------------------
+
+echo "rivarola" > /etc/hostname
+
+#-----------------------
+# configuramos los hosts
+#-----------------------
+
+nano -w /etc/hosts
+
+# Ejemplo
+# 127.0.0.1 localhost
+# ::1       localhost
+# 127.0.1.1 rivarola.localdomain rivarola
+
+#-----------------------------------------
+# Creamos el password para el usuario root
+#-----------------------------------------
+
+passwd
+
+#-------------------------------------------------------
+# Habilitamos NetworkManager para la conexion a internet
+#-------------------------------------------------------
+
+systemctl enable NetworkManager # respetamos las mayusculas
+
+#-------------------------------
+# Habilitamos la conexion remota
+#-------------------------------
+
+systemctl enable sshd
+
+#---------------------------------
+# Habilitamos el TRIM semanal para los SSD
+#---------------------------------
+
+systemctl enable fstrim.timer
+
+#--------------------------------------------------------
+# Editamos y desmarcamos todo lo necesario en pacman.conf
+#--------------------------------------------------------
+
+nano -w /etc/pacman.conf
+
+# Ejemplo
+# Desmarcamos donde dice color
+# Desmarcamos donde dice VerbosePkgList
+# Desmarcamos donde dice ParallelDownloads = 5 y lo cambiamos a 10
+# Agregamos la palabra ILoveCandy por debajo de ParallelsDownloads
+# Desmarcamos el repositorio multilib donde dice [multilib] y tambien Include = /etc/pacman.d/mirrorList
+
+#------------------------------
+# Actualizamos los repositorios
+#------------------------------
+
+pacman -Syu
+
+#--------------------------------------------------------------
+# Descargamos las apps para los diferentes sistemas de archivos
+#--------------------------------------------------------------
+
+pacman -S dosfstools jfsutils f2fs-tools btrfs-progs exfatprogs ntfs-3g reiserfsprogs udftools xfsprogs nilfs-utils polkit gpart mtools --noconfirm --needed
+
+#------------------------------------------------------------
+# Descargamos las apps para comprimir y descomprimir archivos
+#------------------------------------------------------------
+
+pacman -S binutils gzip lha lrzip lzip lz4 p7zip tar xz bzip2 lbzip2 arj lzop cpio unrar unzip zstd zip unarj --noconfirm --needed
+
+#-------------------------------
+# Descargamos python y reflector
+#-------------------------------
+
+pacman -S python reflector --noconfirm --needed
+
+#----------------------------------------------
+# Descargamos git y dos navegadores de terminal
+#----------------------------------------------
+
+pacman -S git wget curl --noconfirm --needed
+
+#---------------------------------------------------------
+# Descargamos XDG user para que nos cree nuestras carpetas
+#---------------------------------------------------------
+
+pacman -S xdg-user-dirs --noconfirm --needed
+
+#--------------------------------------
+# Descargamos el autocompletado de bash
+#--------------------------------------
+
+pacman -S bash-completion --noconfirm --needed
+
+#------------------------------------------
+# Descargamos el microcodigo del procesador
+#------------------------------------------
+
+pacman -S intel-ucode --noconfirm --needed
+
+#-----------------------------------------------
+# Descargamos el kernel linux y sus dependencias
+#-----------------------------------------------
+
+pacman -S linux-firmware mkinitcpio linux linux-headers --noconfirm --needed
+
+#------------------------------------
+# Descargamos las dependencias de efi
+#------------------------------------
+
+pacman -S efibootmgr --noconfirm --needed
+
+#-----------------------------------------------
+# Revisamos que estemos en un systema efi o uefi
+#-----------------------------------------------
+
+ls /sys/firmware/efi/efivar/ # si te da una lista es porque estamos en un sistema efi o si te manda error es porque no es efi sino que bios
+
+#-----------------------
+# Instalamos systemdboot
+#-----------------------
+
+bootctl install
+
+#--------------------------------
+# Editamos el archivo loader.conf
+#--------------------------------
+
+nano -w /boot/loader/loader.conf
+
+# Ejemplo ingresamos estos valores
+# default arch
+# timeout 5
+# console-mode max
+# editor  yes
+
+#---------------------------------------------------
+# Creamos un archivo booteable en la carpeta entries
+#---------------------------------------------------
+
+nano -w /boot/loader/entries/arch.conf
+
+# Ejemplo ingresamos estos valores e ingresamos en donde estan los numerales el codigo de raiz /dev/sda2 PARTUUID
+# title   Arch Linux
+# linux   /vmlinuz-linux
+# initrd  /intel-ucode.img
+# initrd  /initramfs-linux.img
+# options root=PARTUUID=########-####-####-####-############ rw
+
+#-----------------------------------------------------
+# Creamos otro archivo booteable en la carpeta entries
+#-----------------------------------------------------
+
+nano -w /boot/loader/entries/arch-fallback.conf
+
+# Ejemplo ingresamos estos valores e ingresamos en donde estan los numerales el codigo de raiz /dev/sda2 PARTUUID
+# title   Arch Linux (fallback initramfs)
+# linux   /vmlinuz-linux
+# initrd  /intel-ucode.img
+# initrd  /initramfs-linux-fallback.img
+# options root=PARTUUID=########-####-####-####-############ rw
+
+#-----------------------------
+# Revisamos que este todo bien
+#-----------------------------
+
+bootctl list
+
+#-------------------
+# Salimos de la raiz
+#-------------------
+
+exit
+exit # escribimos exit y precionamos enter # 2 veces
+
+#-----------------
+# Desmontamos /mnt
+#-----------------
+
+umount -R /mnt
+
+#-------------------
+# Apagamos el equipo
+#-------------------
+
+poweroff # retiramos el usb cuando es equipo este apagado y luego lo volvemos a encender
+
+#########################################################################################
+#
+# POST INSTALL
+#
+#########################################################################################
+
+#--------------------------------------------
+# Ravisamos que NetworkManager este corriendo
+#--------------------------------------------
+
+systemctl status NetworkManager
+
+systemctl status sshd
+
+systemctl status fstrim.timer
+
+#-----------------
+# Descargamos Xorg
+#-----------------
+
+pacman -S xorg-apps xorg-docs xorg-fonts-100dpi xorg-fonts-75dpi xorg-fonts xorg-server xorg-server-devel xorg-xwayland xf86-video-intel --noconfirm --needed
+
+#--------------------
+# Descargamos wayland
+#--------------------
+
+pacman -S wayland wayland-docs wayland-protocols wayland-utils waylandpp --noconfirm --needed
+
+#---------------------
+# Descargamos Pipewire
+#---------------------
+
+pacman -S pipewire pipewire-alsa pipewire-audio pipewire-docs pipewire-jack pipewire-pulse wireplumber --noconfirm --needed
+
+#-----------------------------
+# Descargamos drivers de video
+#-----------------------------
+
+pacman -S ffmpeg aom libde265 x264 x265 libmpeg2 xvidcore libtheora libvpx schroedinger sdl gstreamer gst-plugins-bad gst-plugins-base gst-plugins-good gst-plugins-ugly xine-lib libdvdcss libdvdread dvd+rw-tools lame --noconfirm --needed
+
+#-------------------------------
+# Descargamos driver de imagenes
+#-------------------------------
+
+pacman -S jasper openjpeg2 libmng vcdimager libmad libnfs --noconfirm --needed
+
+#-------------------------------
+# Descargamos fastfetch y bottom
+#-------------------------------
+
+pacman -S fastfetch bottom --noconfirm --needed # fastfetch es igual que neofetch y bottom es alternativa a htop
+
+#-----------------------------------------------------
+# Vemos los grupos disponibles para agregar un usuario
+#-----------------------------------------------------
+
+cat /etc/group
+
+#--------------------------
+# Agregamos nuestro usuario
+#--------------------------
+
+useradd -m -G sys,mem,ftp,mail,log,smmsp,proc,games,lock,network,floppy,scanner,power,nobody,adm,wheel,utmp,audio,disk,input,kmem,kvm,lp,optical,render,sgx,storage,tty,uucp,video,users,groups,systemd-journal,rfkill,bin,daemon,http,dbus,systemd-coredump,systemd,network,systemd-oom,systemd-journal-remote,systemd-resolve,systemd-timesync,tss,uuidd,polkitd,git,avahi -s /bin/bash robert
+
+#----------------------------------------
+# Agregamos un password a nuestro usuario
+#----------------------------------------
+
+passwd robert
+
+#----------------------------
+# Editamos el archivo sudoers
+#----------------------------
+
+nano -w /etc/sudoers # desmarcamos la linea nro 117
+
+#--------------------------------------------------------------------
+# Reiniciamos nuestro equipo para luego ingresar como nuestro usuario
+#--------------------------------------------------------------------
+
+reboot
+
+#----------------------------------------------------------------------------
+# Despues de ingresar como nuestro usuario habilitamos pipewire y wireplumber
+#----------------------------------------------------------------------------
+
+systemctl --user --now enable pipewire
+
+systemctl --user --now enable pipewire-pulse
+
+systemctl --user --now enable wireplumber
+
+#----------------------------------------------------------------
+# Creamos nuestras carpetas para montar las particiones restantes
+#----------------------------------------------------------------
+
+mkdir -pv /home/robert/SSD
+
+mkdir -pv /home/robert/HDD
+
+#-------------------------
+# Montamos las particiones
+#-------------------------
+
+sudo mount /dev/sdb1 /home/robert/SSD
+
+sudo mount /dev/sdc2 /home/robert/HDD
+
+#-------------------------------
+# Editamos nuestro archivo fstab
+#-------------------------------
+
+sudo nano -w /etc/fstab
+
+# Ejemplo como se deberia ver los UUID serian los correpondientes a su montaje este es solo un ejemplo
+
+# Static information about the filesystems.
+# See fstab(5) for details.
+
+# <file system> <dir> <type> <options> <dump> <pass>
+
+# /dev/sda2
+UUID=94abe045-a82f-4abb-afbc-7335225454ba   /                   btrfs   rw,relatime,ssd,space_cache=v2,subvolid=5,subvol=/                                                      0 0
+
+# /dev/sda1
+UUID=113D-F9CE                              /boot               vfat    rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro   0 2
+
+# /dev/sdb1
+UUID=a212d0bc-3be1-4334-acb1-aefbc8cc9ffc   /home/robert/SSD    btrfs   rw,relatime,ssd,space_cache=v2,subvolid=5,subvol=/                                                      0 0
+
+# /dev/sdc2
+UUID=99c4f02f-f3a2-4e1d-8301-82f265c08645   /home/robert/HDD    ext4    rw,relatime                                                                                             0 2
+
+# /dev/sdc1
+UUID=09a10a8b-f38e-4bac-810d-876f8558d1ad   none                swap    defaults                                                                                                0 0
+
+# /tmp
+tmpfs                                       /tmp                tmpfs   rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0755,size=40%,inode64                                     0 0
+
+#-------------------------------------------------------------------------------------------------
+# Damos permisos para poder crear carpetas, archivos etc.. en esas particiones como usuario normal
+#-------------------------------------------------------------------------------------------------
+
+sudo chown robert:robert /home/robert/SSD
+
+sudo chown robert:robert /home/robert/HDD
+
+#---------------------------------------------------------
+# Entramos a nuestra carpeta y creamos las carpetas en SSD
+#---------------------------------------------------------
+
+cd /home/robert/SSD/
+
+mkdir -pv Documents Downloads Music Pictures Videos
+
+cd # regresamos a la carpeta principal
+
+#-------------------------------------------------------------------------------
+# Entramos a nuestra carpeta y creamos la carpeta para maquinas virtuales en HDD
+#-------------------------------------------------------------------------------
+
+cd /home/robert/HDD/
+
+mkdir -pv "Virtual Machines"
+
+cd # regresamos a la carpeta principal
+
+#---------------------------
+# Descargamos rust para paru
+#---------------------------
+
+sudo pacman -S rust --noconfirm --needed
+
+#---------------------------
+# Clonamos e instalamos paru
+#---------------------------
+
+cd SSD/ # entramos a la carpeta ssd
+
+git clone https://aur.archlinux.org/paru.git # clonamos paru
+
+cd paru/ # entramos a la carpeta paru
+
+makepkg -si # compilamos paru
+
+* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *
+* Hasta aca ya tendriamos las bases solo queda instalar un WindowManager o DesktopManager *
+* *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *
+
+Continuamos en el archivo de Hyprland...
